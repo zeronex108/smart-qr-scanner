@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Auto Barcode/QR Scanner</title>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 20px;
+    }
+
+    #reader {
+      width: 300px;
+      margin: 20px auto;
+      display: none;
+    }
+
+    #barcode-input {
+      opacity: 0;
+      position: absolute;
+    }
+
+    #scan-result {
+      margin-top: 20px;
+      font-size: 1.2em;
+      font-weight: bold;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Auto Barcode / QR Code Scanner</h2>
+  <button onclick="startScanner()">Scan Now</button>
+
+  <div id="reader"></div>
+  <input type="text" id="barcode-input" />
+  <div id="scan-result">Scan result will appear here</div>
+
+  <script>
+    let isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+    let html5QrCode;
+    let scanBuffer = '';
+    let scanTimer;
+
+    function showResult(text) {
+      document.getElementById('scan-result').innerText = 'Scanned: ' + text;
+    }
+
+    function startScanner() {
+      if (isMobile) {
+        startMobileScanner();
+      } else {
+        startPCScanner();
+      }
+    }
+
+    function startPCScanner() {
+      const input = document.getElementById('barcode-input');
+      input.value = '';
+      scanBuffer = '';
+      input.focus();
+
+      input.addEventListener('input', handleInput);
+
+      function handleInput(e) {
+        clearTimeout(scanTimer);
+        scanBuffer = e.target.value;
+
+        scanTimer = setTimeout(() => {
+          if (scanBuffer.length >= 3) { // Adjust min length to avoid false positives
+            showResult(scanBuffer);
+          }
+          input.removeEventListener('input', handleInput);
+          input.value = '';
+        }, 300); // Wait for "typing" to stop
+      }
+
+      alert('Ready to scan. Use your barcode gun.');
+    }
+
+    function startMobileScanner() {
+      const readerElement = document.getElementById("reader");
+      readerElement.style.display = "block";
+
+      if (!html5QrCode) {
+        html5QrCode = new Html5Qrcode("reader");
+      }
+
+      Html5Qrcode.getCameras().then(devices => {
+        if (devices && devices.length) {
+          html5QrCode.start(
+            { facingMode: "environment" },
+            {
+              fps: 10,
+              qrbox: { width: 250, height: 250 }
+            },
+            (decodedText, decodedResult) => {
+              showResult(decodedText);
+              html5QrCode.stop();
+              readerElement.style.display = "none";
+            },
+            errorMessage => {
+              // Optional: handle scanning errors
+            }
+          ).catch(err => {
+            showResult("Camera error: " + err);
+          });
+        } else {
+          showResult("No camera found.");
+        }
+      }).catch(err => {
+        showResult("Camera access error: " + err);
+      });
+    }
+  </script>
+</body>
+</html>
